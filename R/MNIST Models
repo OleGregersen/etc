@@ -1,0 +1,48 @@
+models <- c("glm", "lda", "naive_bayes", "svmLinear", "knn", "gamLoess", "multinom", "qda", "rf", "adaboost")
+library(caret)
+library(dslabs)
+library(tidyverse)
+# set.seed(1) # if using R 3.5 or earlier
+set.seed(1, sample.kind = "Rounding") # if using R 3.6 or later
+data("mnist_27")
+fits <- lapply(models, function(model){ 
+  print(model)
+  train(y ~ ., method = model, data = mnist_27$train)
+}) 
+names(fits) <- models
+pred <- sapply(fits, function(object) 
+  predict(object, newdata = mnist_27$test))
+dim(pred)
+glm_acc <- sum(ifelse(pred[,1]==mnist_27$test$y, 1, 0))/200 # glm
+lda_acc <-sum(ifelse(pred[,2]==mnist_27$test$y, 1, 0))/200 # lda
+nb_acc <-sum(ifelse(pred[,3]==mnist_27$test$y, 1, 0))/200 # naive_bayes
+sl_acc <-sum(ifelse(pred[,4]==mnist_27$test$y, 1, 0))/200 # svmLinear
+knn_acc <-sum(ifelse(pred[,5]==mnist_27$test$y, 1, 0))/200 # knn
+gam_acc <-sum(ifelse(pred[,6]==mnist_27$test$y, 1, 0))/200 # gamLoess
+mul_acc <-sum(ifelse(pred[,7]==mnist_27$test$y, 1, 0))/200 # multinom
+qda_acc <-sum(ifelse(pred[,8]==mnist_27$test$y, 1, 0))/200 # qda
+rf_acc <-sum(ifelse(pred[,9]==mnist_27$test$y, 1, 0))/200 # rf
+ada_acc <-sum(ifelse(pred[,10]==mnist_27$test$y, 1, 0))/200 # adaboost
+sum(glm_acc, lda_acc, nb_acc, sl_acc, knn_acc, gam_acc, mul_acc, qda_acc, rf_acc, ada_acc)/10
+acc <- colMeans(pred == mnist_27$test$y)
+acc
+mean(acc)
+row_acc <- rowMeans(pred == 2)
+p_mod <- ifelse(row_acc > 0.5, 2,7)
+y_hat <- confusionMatrix(factor(p_mod), mnist_27$test$y)$overall["Accuracy"]
+y_hat
+ind <- acc > mean(p_mod == mnist_27$test$y)
+sum(ind)
+models[ind]
+reAcc <- sapply(fits, function(object){
+  mean(object[["resample"]][["Accuracy"]])
+})
+mean(reAcc)
+acc_hat <- sapply(fits, function(fit) min(fit$results$Accuracy))
+mean(acc_hat)
+ind <- reAcc >= 0.8
+mean(reAcc[ind])
+ind <- reAcc >= 0.8
+votes <- rowMeans(pred[,ind] == "7")
+y_hat <- ifelse(votes>=0.5, 7, 2)
+mean(y_hat == mnist_27$test$y)
